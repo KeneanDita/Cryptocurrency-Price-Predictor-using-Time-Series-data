@@ -1,0 +1,52 @@
+{% extends "base.html" %} {% block title %}Home - Crypto Price Predictor{%
+endblock %} {% block content %}
+<div class="row">
+  <div class="col-md-8 mx-auto text-center">
+    <div class="jumbotron py-5">
+      <h1 class="display-4">Crypto Price Predictor</h1>
+      <p class="lead">
+        Predict cryptocurrency prices using XGBoost machine learning models
+      </p>
+      <hr class="my-4" />
+      <p>
+        Currently supporting: {% for crypto in cryptocurrencies %}
+        <span class="badge bg-primary">{{ crypto }}</span>
+        {% endfor %}
+      </p>
+      <a class="btn btn-primary btn-lg mt-3" href="{{ url_for('predict') }}">
+        <i class="fas fa-rocket"></i> Start Predicting
+      </a>
+    </div>
+
+    <div class="row mt-5">
+      <div class="col-md-4">
+        <div class="card">
+          <div class="card-body text-center">
+            <i class="fas fa-brain fa-3x text-primary mb-3"></i>
+            <h5>XGBoost Models</h5>
+            <p>Powered by trained XGBoost models for accurate predictions</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card">
+          <div class="card-body text-center">
+            <i class="fas fa-coins fa-3x text-warning mb-3"></i>
+            <h5>Multiple Cryptocurrencies</h5>
+            <p>Predict prices for Bitcoin, Ethereum, Litecoin, and XPR</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="card">
+          <div class="card-body text-center">
+            <i class="fas fa-chart-bar fa-3x text-success mb-3"></i>
+            <h5>Real-time Analysis</h5>
+            <p>Get price predictions based on current market features</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
