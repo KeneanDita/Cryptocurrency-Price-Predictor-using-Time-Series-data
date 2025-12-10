@@ -5,16 +5,28 @@ endblock %} {% block content %}
     <div class="card">
       <div class="card-header bg-primary text-white">
         <h3>
-          <i class="fas fa-calculator"></i> Cryptocurrency Price Prediction
+          <i class="fas fa-calculator"></i> Predict Tomorrow's Crypto Price
         </h3>
-        <p class="mb-0">Enter current market data to predict the next price</p>
+        <p class="mb-0">
+          Enter TODAY'S market data to predict TOMORROW'S closing price
+        </p>
       </div>
       <div class="card-body">
-        {% if error %}
-        <div class="alert alert-danger">
-          <i class="fas fa-exclamation-triangle"></i> {{ error }}
+        {% with messages = get_flashed_messages(with_categories=true) %} {% if
+        messages %} {% for category, message in messages %}
+        <div
+          class="alert alert-{{ 'danger' if category == 'danger' else 'warning' }}"
+        >
+          <i class="fas fa-exclamation-triangle"></i> {{ message }}
         </div>
-        {% endif %}
+        {% endfor %} {% endif %} {% endwith %}
+
+        <div class="alert alert-info">
+          <i class="fas fa-info-circle"></i>
+          <strong>Normalization Note:</strong> All input values are
+          automatically normalized to the [{{ norm_min }}, {{ norm_max }}] range
+          that the model was trained on.
+        </div>
 
         <form
           method="POST"
@@ -25,7 +37,7 @@ endblock %} {% block content %}
             <div class="col-md-6">
               <div class="card">
                 <div class="card-header">
-                  <h5><i class="fas fa-coins"></i> Select Cryptocurrency</h5>
+                  <h5><i class="fas fa-coins"></i> 1. Select Cryptocurrency</h5>
                 </div>
                 <div class="card-body">
                   <div class="mb-3">
@@ -46,7 +58,7 @@ endblock %} {% block content %}
                       {% endfor %}
                     </select>
                     <div class="form-text">
-                      Select the cryptocurrency you want to predict
+                      Select which cryptocurrency to predict
                     </div>
                   </div>
                 </div>
@@ -60,14 +72,16 @@ endblock %} {% block content %}
                 </div>
                 <div class="card-body">
                   <p>
-                    This predictor uses XGBoost models trained on historical
-                    data with 14 technical indicators.
+                    <strong>Prediction Target:</strong> Tomorrow's Close Price
                   </p>
+                  <p><strong>Input Required:</strong> Today's market data</p>
                   <p>
-                    <strong>Tip:</strong> Fill at least Open, High, Low, Close
-                    values. Other features will be calculated automatically.
+                    <strong>Normalization:</strong> Values normalized to [{{
+                    norm_min }}, {{ norm_max }}]
                   </p>
-                  <p class="mb-0"><small>All values should be in USD</small></p>
+                  <p class="mb-0 text-muted">
+                    <small>Technical indicators auto-calculated if blank</small>
+                  </p>
                 </div>
               </div>
             </div>
@@ -76,10 +90,14 @@ endblock %} {% block content %}
           <div class="card mb-4">
             <div class="card-header">
               <h5>
-                <i class="fas fa-chart-line"></i> Basic Market Data (Required)
+                <i class="fas fa-chart-line"></i> 2. Enter TODAY'S Market Data
+                <span class="text-danger">*Required</span>
               </h5>
             </div>
             <div class="card-body">
+              <p class="text-muted mb-3">
+                Enter today's actual market prices (all in USD):
+              </p>
               <div class="row">
                 <div class="col-md-3 mb-3">
                   <label for="Open" class="form-label">Open Price ($):</label>
@@ -92,6 +110,7 @@ endblock %} {% block content %}
                     required
                     placeholder="e.g., 42000.50"
                   />
+                  <div class="form-text">Today's opening price</div>
                 </div>
                 <div class="col-md-3 mb-3">
                   <label for="High" class="form-label">High Price ($):</label>
@@ -104,6 +123,7 @@ endblock %} {% block content %}
                     required
                     placeholder="e.g., 42500.75"
                   />
+                  <div class="form-text">Today's highest price</div>
                 </div>
                 <div class="col-md-3 mb-3">
                   <label for="Low" class="form-label">Low Price ($):</label>
@@ -116,6 +136,7 @@ endblock %} {% block content %}
                     required
                     placeholder="e.g., 41800.25"
                   />
+                  <div class="form-text">Today's lowest price</div>
                 </div>
                 <div class="col-md-3 mb-3">
                   <label for="Close" class="form-label">Close Price ($):</label>
@@ -128,6 +149,7 @@ endblock %} {% block content %}
                     required
                     placeholder="e.g., 42200.00"
                   />
+                  <div class="form-text">Today's closing price</div>
                 </div>
               </div>
             </div>
@@ -136,13 +158,17 @@ endblock %} {% block content %}
           <div class="card mb-4">
             <div class="card-header">
               <h5>
-                <i class="fas fa-calculator"></i> Technical Indicators (Optional
-                - will be auto-calculated if empty)
+                <i class="fas fa-calculator"></i> 3. Technical Indicators
+                (Optional - Auto-calculated)
               </h5>
             </div>
             <div class="card-body">
+              <p class="text-muted mb-3">
+                These will be calculated automatically, but you can override
+                them:
+              </p>
               <div class="row">
-                <div class="col-md-3 mb-3">
+                <div class="col-md-4 mb-3">
                   <label for="Daily_Return" class="form-label"
                     >Daily Return (%):</label
                   >
@@ -154,82 +180,11 @@ endblock %} {% block content %}
                     name="Daily_Return"
                     placeholder="Auto-calculated"
                   />
-                  <div class="form-text">(Close - Open) / Open * 100</div>
+                  <div class="form-text">
+                    Today's return: (Close - Open) / Open
+                  </div>
                 </div>
-                <div class="col-md-3 mb-3">
-                  <label for="Log_Return" class="form-label">Log Return:</label>
-                  <input
-                    type="number"
-                    step="0.0001"
-                    class="form-control"
-                    id="Log_Return"
-                    name="Log_Return"
-                    placeholder="Auto-calculated"
-                  />
-                </div>
-                <div class="col-md-3 mb-3">
-                  <label for="MA_7" class="form-label">7-Day MA:</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    class="form-control"
-                    id="MA_7"
-                    name="MA_7"
-                    placeholder="Auto-calculated"
-                  />
-                </div>
-                <div class="col-md-3 mb-3">
-                  <label for="MA_14" class="form-label">14-Day MA:</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    class="form-control"
-                    id="MA_14"
-                    name="MA_14"
-                    placeholder="Auto-calculated"
-                  />
-                </div>
-              </div>
-
-              <div class="row">
-                <div class="col-md-3 mb-3">
-                  <label for="MA_30" class="form-label">30-Day MA:</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    class="form-control"
-                    id="MA_30"
-                    name="MA_30"
-                    placeholder="Auto-calculated"
-                  />
-                </div>
-                <div class="col-md-3 mb-3">
-                  <label for="Volatility_7" class="form-label"
-                    >7-Day Volatility:</label
-                  >
-                  <input
-                    type="number"
-                    step="0.0001"
-                    class="form-control"
-                    id="Volatility_7"
-                    name="Volatility_7"
-                    placeholder="e.g., 0.02"
-                  />
-                </div>
-                <div class="col-md-3 mb-3">
-                  <label for="Volatility_14" class="form-label"
-                    >14-Day Volatility:</label
-                  >
-                  <input
-                    type="number"
-                    step="0.0001"
-                    class="form-control"
-                    id="Volatility_14"
-                    name="Volatility_14"
-                    placeholder="e.g., 0.02"
-                  />
-                </div>
-                <div class="col-md-3 mb-3">
+                <div class="col-md-4 mb-3">
                   <label for="RSI" class="form-label">RSI (0-100):</label>
                   <input
                     type="number"
@@ -241,11 +196,38 @@ endblock %} {% block content %}
                     max="100"
                     placeholder="e.g., 65.5"
                   />
+                  <div class="form-text">Relative Strength Index</div>
+                </div>
+                <div class="col-md-4 mb-3">
+                  <label for="Volatility_7" class="form-label"
+                    >7-Day Volatility:</label
+                  >
+                  <input
+                    type="number"
+                    step="0.0001"
+                    class="form-control"
+                    id="Volatility_7"
+                    name="Volatility_7"
+                    placeholder="e.g., 0.025"
+                  />
+                  <div class="form-text">Recent price volatility</div>
                 </div>
               </div>
 
               <div class="row">
-                <div class="col-md-3 mb-3">
+                <div class="col-md-4 mb-3">
+                  <label for="MA_7" class="form-label">7-Day MA:</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    class="form-control"
+                    id="MA_7"
+                    name="MA_7"
+                    placeholder="Auto-calculated"
+                  />
+                  <div class="form-text">7-day moving average</div>
+                </div>
+                <div class="col-md-4 mb-3">
                   <label for="MACD" class="form-label">MACD:</label>
                   <input
                     type="number"
@@ -255,8 +237,11 @@ endblock %} {% block content %}
                     name="MACD"
                     placeholder="e.g., 150.25"
                   />
+                  <div class="form-text">
+                    Moving Average Convergence Divergence
+                  </div>
                 </div>
-                <div class="col-md-3 mb-3">
+                <div class="col-md-4 mb-3">
                   <label for="MACD_Signal" class="form-label"
                     >MACD Signal:</label
                   >
@@ -268,7 +253,48 @@ endblock %} {% block content %}
                     name="MACD_Signal"
                     placeholder="e.g., 140.50"
                   />
+                  <div class="form-text">MACD Signal line</div>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card mb-4">
+            <div class="card-header">
+              <h5><i class="fas fa-info-circle"></i> Normalization Ranges</h5>
+            </div>
+            <div class="card-body">
+              <p class="text-muted mb-3">
+                Values are normalized to the [{{ norm_min }}, {{ norm_max }}]
+                range:
+              </p>
+              <div class="table-responsive">
+                <table class="table table-sm table-hover">
+                  <thead>
+                    <tr>
+                      <th>Feature</th>
+                      <th>Min Value</th>
+                      <th>Max Value</th>
+                      <th>Normalized to</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for feature in features %}
+                    <tr>
+                      <td><strong>{{ feature }}</strong></td>
+                      <td>
+                        {% if norm_ranges and feature in norm_ranges %} {{
+                        norm_ranges[feature][0] }} {% else %} N/A {% endif %}
+                      </td>
+                      <td>
+                        {% if norm_ranges and feature in norm_ranges %} {{
+                        norm_ranges[feature][1] }} {% else %} N/A {% endif %}
+                      </td>
+                      <td>[{{ norm_min }}, {{ norm_max }}]</td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
@@ -279,7 +305,7 @@ endblock %} {% block content %}
               class="btn btn-primary btn-lg me-md-3"
               id="predictBtn"
             >
-              <i class="fas fa-paper-plane"></i> Predict Price
+              <i class="fas fa-crystal-ball"></i> Predict Tomorrow's Price
             </button>
             <button
               type="button"
@@ -290,14 +316,7 @@ endblock %} {% block content %}
             </button>
             <button
               type="button"
-              class="btn btn-outline-secondary me-md-3"
-              onclick="fillSampleData('ETH')"
-            >
-              <i class="fab fa-ethereum"></i> ETH Sample
-            </button>
-            <button
-              type="button"
-              class="btn btn-outline-danger"
+              class="btn btn-outline-secondary"
               onclick="clearForm()"
             >
               <i class="fas fa-eraser"></i> Clear Form
@@ -311,7 +330,6 @@ endblock %} {% block content %}
 {% endblock %} {% block scripts %}
 <script>
   function fillSampleData(crypto) {
-    // Sample data for different cryptocurrencies
     const sampleData = {
       BTC: {
         Open: 42000.5,
@@ -319,13 +337,9 @@ endblock %} {% block content %}
         Low: 41800.25,
         Close: 42200.0,
         Daily_Return: -0.48,
-        Log_Return: 0.0035,
-        MA_7: 42150.0,
-        MA_14: 42000.0,
-        MA_30: 41850.0,
-        Volatility_7: 0.025,
-        Volatility_14: 0.023,
         RSI: 65.5,
+        Volatility_7: 0.025,
+        MA_7: 42150.0,
         MACD: 150.25,
         MACD_Signal: 145.75,
       },
@@ -335,13 +349,9 @@ endblock %} {% block content %}
         Low: 2235.75,
         Close: 2260.25,
         Daily_Return: 0.44,
-        Log_Return: 0.0044,
-        MA_7: 2245.0,
-        MA_14: 2230.0,
-        MA_30: 2210.0,
-        Volatility_7: 0.028,
-        Volatility_14: 0.026,
         RSI: 58.3,
+        Volatility_7: 0.028,
+        MA_7: 2245.0,
         MACD: 25.8,
         MACD_Signal: 24.5,
       },
@@ -351,13 +361,9 @@ endblock %} {% block content %}
         Low: 74.9,
         Close: 75.75,
         Daily_Return: 0.2,
-        Log_Return: 0.002,
-        MA_7: 75.2,
-        MA_14: 74.8,
-        MA_30: 74.2,
-        Volatility_7: 0.032,
-        Volatility_14: 0.03,
         RSI: 52.1,
+        Volatility_7: 0.032,
+        MA_7: 75.2,
         MACD: 1.25,
         MACD_Signal: 1.15,
       },
@@ -367,13 +373,9 @@ endblock %} {% block content %}
         Low: 0.51,
         Close: 0.53,
         Daily_Return: 1.92,
-        Log_Return: 0.019,
-        MA_7: 0.525,
-        MA_14: 0.52,
-        MA_30: 0.515,
-        Volatility_7: 0.035,
-        Volatility_14: 0.033,
         RSI: 62.8,
+        Volatility_7: 0.035,
+        MA_7: 0.525,
         MACD: 0.025,
         MACD_Signal: 0.02,
       },
@@ -391,17 +393,25 @@ endblock %} {% block content %}
     // Select the cryptocurrency
     document.getElementById("cryptocurrency").value = crypto;
 
-    // Auto-calculate Daily_Return if Open and Close are filled
+    // Auto-calculate Daily_Return if not already filled
     autoCalculateDailyReturn();
   }
 
   function autoCalculateDailyReturn() {
-    const open = parseFloat(document.getElementById("Open").value);
-    const close = parseFloat(document.getElementById("Close").value);
+    const openInput = document.getElementById("Open");
+    const closeInput = document.getElementById("Close");
+    const dailyReturnInput = document.getElementById("Daily_Return");
 
-    if (open && close) {
-      const dailyReturn = (((close - open) / open) * 100).toFixed(2);
-      document.getElementById("Daily_Return").value = dailyReturn;
+    if (openInput && closeInput && dailyReturnInput) {
+      const open = parseFloat(openInput.value);
+      const close = parseFloat(closeInput.value);
+      const currentDailyReturn = parseFloat(dailyReturnInput.value);
+
+      // Only calculate if both values exist and Daily_Return is empty
+      if (open && close && !currentDailyReturn) {
+        const dailyReturn = (((close - open) / open) * 100).toFixed(2);
+        dailyReturnInput.value = dailyReturn;
+      }
     }
   }
 
