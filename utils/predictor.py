@@ -1,70 +1,133 @@
 import pandas as pd
 import numpy as np
-from flask import current_app
+from .normalizer import DataNormalizer  # Import from the same directory
 
 
 class PricePredictor:
-    def __init__(self, model_loader):
+    def __init__(self, model_loader, norm_min=1, norm_max=10, ranges=None):
         self.model_loader = model_loader
+        self.normalizer = DataNormalizer(norm_min, norm_max, ranges)
 
-    def predict(self, cryptocurrency, features):
+    def predict_next_close(self, cryptocurrency, features):
         """
-        Make prediction for cryptocurrency price
+        Predict tomorrow's Close price for cryptocurrency
 
         Args:
             cryptocurrency: BTC, ETH, LTC, or XPR
-            features: Dictionary of feature values
+            features: Dictionary of TODAY's feature values (not normalized)
 
         Returns:
-            Predicted price
+            Predicted TOMORROW's Close price (denormalized)
         """
         # Get the model
         model = self.model_loader.get_model(cryptocurrency)
 
-        # Create DataFrame with features
-        feature_df = pd.DataFrame([features])
+        # Normalize input features
+        normalized_features = self.normalizer.normalize_features(features)
 
-        # Ensure all required features are present
-        required_features = current_app.config["FEATURES"]
+        # Create DataFrame with normalized features
+        feature_df = pd.DataFrame([normalized_features])
+
+        # Define required features (hardcoded for now)
+        required_features = [
+            "Open",
+            "High",
+            "Low",
+            "Close",
+            "Daily_Return",
+            "Log_Return",
+            "MA_7",
+            "MA_14",
+            "MA_30",
+            "Volatility_7",
+            "Volatility_14",
+            "RSI",
+            "MACD",
+            "MACD_Signal",
+        ]
+
+        # Calculate any missing technical indicators
         for feature in required_features:
             if feature not in feature_df.columns:
-                # Try to calculate missing features if we have basic data
-                feature_df = self._calculate_missing_features(feature_df, feature)
+                feature_df = self._calculate_technical_indicators(
+                    feature_df, feature, normalized_features
+                )
 
-        # Reorder columns to match model expectations
+        # Ensure all columns exist and in correct order
+        for feature in required_features:
+            if feature not in feature_df.columns:
+                feature_df[feature] = 5.5  # Default middle value
+
+        # Reorder columns to match model training order
         feature_df = feature_df[required_features]
 
-        # Make prediction
-        try:
-            prediction = model.predict(feature_df)
-            return float(prediction[0])
-        except Exception as e:
-            raise ValueError(f"Prediction failed: {str(e)}. Check feature values.")
+        # Debug: Print what we're sending to the model
+        print(f"\nMaking prediction for {cryptocurrency}:")
+        print(f"Original features: {features}")
+        print(f"Normalized features: {normalized_features}")
 
-    def _calculate_missing_features(self, df, feature):
-        """Calculate missing features if possible"""
-        if feature == "Daily_Return" and "Close" in df.columns and "Open" in df.columns:
-            df["Daily_Return"] = (df["Close"] - df["Open"]) / df["Open"] * 100
-        elif feature == "Log_Return" and "Close" in df.columns:
-            # For single prediction, assume previous close is Close - small amount
-            df["Log_Return"] = np.log(df["Close"] / (df["Close"] * 0.99))
-        elif feature == "MA_7" and "Close" in df.columns:
-            df["MA_7"] = df["Close"]
-        elif feature == "MA_14" and "Close" in df.columns:
-            df["MA_14"] = df["Close"]
-        elif feature == "MA_30" and "Close" in df.columns:
-            df["MA_30"] = df["Close"]
-        elif feature == "Volatility_7" and "Close" in df.columns:
-            df["Volatility_7"] = 0.02  # Default volatility
-        elif feature == "Volatility_14" and "Close" in df.columns:
-            df["Volatility_14"] = 0.02  # Default volatility
-        elif feature == "RSI" and "Close" in df.columns:
-            df["RSI"] = 50.0  # Neutral RSI
-        elif feature == "MACD" and "Close" in df.columns:
-            df["MACD"] = 0.0
-        elif feature == "MACD_Signal" and "Close" in df.columns:
-            df["MACD_Signal"] = 0.0
+        # Make prediction (model returns normalized value)
+        try:
+            normalized_prediction = model.predict(feature_df)
+            normalized_price = float(normalized_prediction[0])
+
+            # Denormalize the prediction back to actual price
+            predicted_price = self.normalizer.denormalize_prediction(normalized_price)
+
+            print(f"Model output (normalized): {normalized_price:.4f}")
+            print(f"Denormalized prediction: ${predicted_price:.2f}")
+            print(f"Today's close was: ${features.get('Close', 'N/A')}")
+
+            return predicted_price
+        except Exception as e:
+            print(f"Prediction error: {str(e)}")
+            print(f"Feature columns: {feature_df.columns.tolist()}")
+            print(f"Feature values: {feature_df.iloc[0].to_dict()}")
+            raise ValueError(f"Prediction failed: {str(e)}")
+
+    def _calculate_technical_indicators(self, df, feature, normalized_features):
+        """Calculate technical indicators if missing"""
+        # Try to get from normalized features first
+        if feature in normalized_features:
+            df[feature] = normalized_features[feature]
+            return df
+
+        # If not available, calculate defaults
+        if feature == "Daily_Return":
+            df["Daily_Return"] = 0.0
+
+        elif feature == "Log_Return":
+            df["Log_Return"] = 5.5
+
+        elif feature in ["MA_7", "MA_14", "MA_30"]:
+            df[feature] = 5.5
+
+        elif feature in ["Volatility_7", "Volatility_14"]:
+            df[feature] = 3.0
+
+        elif feature == "RSI":
+            df["RSI"] = 5.5
+
+        elif feature in ["MACD", "MACD_Signal"]:
+            df[feature] = 5.5
+
         else:
-            df[feature] = 0.0  # Default value
+            df[feature] = 5.5
 
         return df
+
+    def predict(self, cryptocurrency, features):
+        """Main prediction method"""
+        return self.predict_next_close(cryptocurrency, features)
+
+    def normalize_single_value(self, feature_name, value):
+        """Helper to normalize a single value"""
+        return self.normalizer.normalize_feature(feature_name, value)
+
+    def denormalize_single_value(self, feature_name, normalized_value):
+        """Helper to denormalize a single value"""
+        return self.normalizer.denormalize_feature(feature_name, normalized_value)
+
+    def update_normalizer(self, norm_min, norm_max, ranges):
+        """Update normalizer configuration"""
+        self.normalizer = DataNormalizer(norm_min, norm_max, ranges)
