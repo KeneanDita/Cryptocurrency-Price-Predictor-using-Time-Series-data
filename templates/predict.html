@@ -1,0 +1,433 @@
+{% extends "base.html" %} {% block title %}Predict - Crypto Price Predictor{%
+endblock %} {% block content %}
+<div class="row">
+  <div class="col-md-10 mx-auto">
+    <div class="card">
+      <div class="card-header bg-primary text-white">
+        <h3>
+          <i class="fas fa-calculator"></i> Cryptocurrency Price Prediction
+        </h3>
+        <p class="mb-0">Enter current market data to predict the next price</p>
+      </div>
+      <div class="card-body">
+        {% if error %}
+        <div class="alert alert-danger">
+          <i class="fas fa-exclamation-triangle"></i> {{ error }}
+        </div>
+        {% endif %}
+
+        <form
+          method="POST"
+          action="{{ url_for('predict') }}"
+          id="predictionForm"
+        >
+          <div class="row mb-4">
+            <div class="col-md-6">
+              <div class="card">
+                <div class="card-header">
+                  <h5><i class="fas fa-coins"></i> Select Cryptocurrency</h5>
+                </div>
+                <div class="card-body">
+                  <div class="mb-3">
+                    <label for="cryptocurrency" class="form-label"
+                      >Cryptocurrency:</label
+                    >
+                    <select
+                      class="form-select form-select-lg"
+                      id="cryptocurrency"
+                      name="cryptocurrency"
+                      required
+                    >
+                      <option value="">Choose a cryptocurrency...</option>
+                      {% for crypto in cryptocurrencies %}
+                      <option value="{{ crypto }}">
+                        {{ crypto }} ({{ crypto }})
+                      </option>
+                      {% endfor %}
+                    </select>
+                    <div class="form-text">
+                      Select the cryptocurrency you want to predict
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="card">
+                <div class="card-header">
+                  <h5><i class="fas fa-info-circle"></i> How It Works</h5>
+                </div>
+                <div class="card-body">
+                  <p>
+                    This predictor uses XGBoost models trained on historical
+                    data with 14 technical indicators.
+                  </p>
+                  <p>
+                    <strong>Tip:</strong> Fill at least Open, High, Low, Close
+                    values. Other features will be calculated automatically.
+                  </p>
+                  <p class="mb-0"><small>All values should be in USD</small></p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card mb-4">
+            <div class="card-header">
+              <h5>
+                <i class="fas fa-chart-line"></i> Basic Market Data (Required)
+              </h5>
+            </div>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-3 mb-3">
+                  <label for="Open" class="form-label">Open Price ($):</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    class="form-control"
+                    id="Open"
+                    name="Open"
+                    required
+                    placeholder="e.g., 42000.50"
+                  />
+                </div>
+                <div class="col-md-3 mb-3">
+                  <label for="High" class="form-label">High Price ($):</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    class="form-control"
+                    id="High"
+                    name="High"
+                    required
+                    placeholder="e.g., 42500.75"
+                  />
+                </div>
+                <div class="col-md-3 mb-3">
+                  <label for="Low" class="form-label">Low Price ($):</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    class="form-control"
+                    id="Low"
+                    name="Low"
+                    required
+                    placeholder="e.g., 41800.25"
+                  />
+                </div>
+                <div class="col-md-3 mb-3">
+                  <label for="Close" class="form-label">Close Price ($):</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    class="form-control"
+                    id="Close"
+                    name="Close"
+                    required
+                    placeholder="e.g., 42200.00"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card mb-4">
+            <div class="card-header">
+              <h5>
+                <i class="fas fa-calculator"></i> Technical Indicators (Optional
+                - will be auto-calculated if empty)
+              </h5>
+            </div>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-3 mb-3">
+                  <label for="Daily_Return" class="form-label"
+                    >Daily Return (%):</label
+                  >
+                  <input
+                    type="number"
+                    step="0.01"
+                    class="form-control"
+                    id="Daily_Return"
+                    name="Daily_Return"
+                    placeholder="Auto-calculated"
+                  />
+                  <div class="form-text">(Close - Open) / Open * 100</div>
+                </div>
+                <div class="col-md-3 mb-3">
+                  <label for="Log_Return" class="form-label">Log Return:</label>
+                  <input
+                    type="number"
+                    step="0.0001"
+                    class="form-control"
+                    id="Log_Return"
+                    name="Log_Return"
+                    placeholder="Auto-calculated"
+                  />
+                </div>
+                <div class="col-md-3 mb-3">
+                  <label for="MA_7" class="form-label">7-Day MA:</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    class="form-control"
+                    id="MA_7"
+                    name="MA_7"
+                    placeholder="Auto-calculated"
+                  />
+                </div>
+                <div class="col-md-3 mb-3">
+                  <label for="MA_14" class="form-label">14-Day MA:</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    class="form-control"
+                    id="MA_14"
+                    name="MA_14"
+                    placeholder="Auto-calculated"
+                  />
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-3 mb-3">
+                  <label for="MA_30" class="form-label">30-Day MA:</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    class="form-control"
+                    id="MA_30"
+                    name="MA_30"
+                    placeholder="Auto-calculated"
+                  />
+                </div>
+                <div class="col-md-3 mb-3">
+                  <label for="Volatility_7" class="form-label"
+                    >7-Day Volatility:</label
+                  >
+                  <input
+                    type="number"
+                    step="0.0001"
+                    class="form-control"
+                    id="Volatility_7"
+                    name="Volatility_7"
+                    placeholder="e.g., 0.02"
+                  />
+                </div>
+                <div class="col-md-3 mb-3">
+                  <label for="Volatility_14" class="form-label"
+                    >14-Day Volatility:</label
+                  >
+                  <input
+                    type="number"
+                    step="0.0001"
+                    class="form-control"
+                    id="Volatility_14"
+                    name="Volatility_14"
+                    placeholder="e.g., 0.02"
+                  />
+                </div>
+                <div class="col-md-3 mb-3">
+                  <label for="RSI" class="form-label">RSI (0-100):</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    class="form-control"
+                    id="RSI"
+                    name="RSI"
+                    min="0"
+                    max="100"
+                    placeholder="e.g., 65.5"
+                  />
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-md-3 mb-3">
+                  <label for="MACD" class="form-label">MACD:</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    class="form-control"
+                    id="MACD"
+                    name="MACD"
+                    placeholder="e.g., 150.25"
+                  />
+                </div>
+                <div class="col-md-3 mb-3">
+                  <label for="MACD_Signal" class="form-label"
+                    >MACD Signal:</label
+                  >
+                  <input
+                    type="number"
+                    step="0.01"
+                    class="form-control"
+                    id="MACD_Signal"
+                    name="MACD_Signal"
+                    placeholder="e.g., 140.50"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+            <button
+              type="submit"
+              class="btn btn-primary btn-lg me-md-3"
+              id="predictBtn"
+            >
+              <i class="fas fa-paper-plane"></i> Predict Price
+            </button>
+            <button
+              type="button"
+              class="btn btn-outline-success me-md-3"
+              onclick="fillSampleData('BTC')"
+            >
+              <i class="fab fa-bitcoin"></i> BTC Sample
+            </button>
+            <button
+              type="button"
+              class="btn btn-outline-secondary me-md-3"
+              onclick="fillSampleData('ETH')"
+            >
+              <i class="fab fa-ethereum"></i> ETH Sample
+            </button>
+            <button
+              type="button"
+              class="btn btn-outline-danger"
+              onclick="clearForm()"
+            >
+              <i class="fas fa-eraser"></i> Clear Form
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block scripts %}
+<script>
+  function fillSampleData(crypto) {
+    // Sample data for different cryptocurrencies
+    const sampleData = {
+      BTC: {
+        Open: 42000.5,
+        High: 42500.75,
+        Low: 41800.25,
+        Close: 42200.0,
+        Daily_Return: -0.48,
+        Log_Return: 0.0035,
+        MA_7: 42150.0,
+        MA_14: 42000.0,
+        MA_30: 41850.0,
+        Volatility_7: 0.025,
+        Volatility_14: 0.023,
+        RSI: 65.5,
+        MACD: 150.25,
+        MACD_Signal: 145.75,
+      },
+      ETH: {
+        Open: 2250.3,
+        High: 2280.5,
+        Low: 2235.75,
+        Close: 2260.25,
+        Daily_Return: 0.44,
+        Log_Return: 0.0044,
+        MA_7: 2245.0,
+        MA_14: 2230.0,
+        MA_30: 2210.0,
+        Volatility_7: 0.028,
+        Volatility_14: 0.026,
+        RSI: 58.3,
+        MACD: 25.8,
+        MACD_Signal: 24.5,
+      },
+      LTC: {
+        Open: 75.6,
+        High: 76.8,
+        Low: 74.9,
+        Close: 75.75,
+        Daily_Return: 0.2,
+        Log_Return: 0.002,
+        MA_7: 75.2,
+        MA_14: 74.8,
+        MA_30: 74.2,
+        Volatility_7: 0.032,
+        Volatility_14: 0.03,
+        RSI: 52.1,
+        MACD: 1.25,
+        MACD_Signal: 1.15,
+      },
+      XPR: {
+        Open: 0.52,
+        High: 0.54,
+        Low: 0.51,
+        Close: 0.53,
+        Daily_Return: 1.92,
+        Log_Return: 0.019,
+        MA_7: 0.525,
+        MA_14: 0.52,
+        MA_30: 0.515,
+        Volatility_7: 0.035,
+        Volatility_14: 0.033,
+        RSI: 62.8,
+        MACD: 0.025,
+        MACD_Signal: 0.02,
+      },
+    };
+
+    // Fill the form with sample data
+    const data = sampleData[crypto];
+    for (const [key, value] of Object.entries(data)) {
+      const input = document.getElementById(key);
+      if (input) {
+        input.value = value;
+      }
+    }
+
+    // Select the cryptocurrency
+    document.getElementById("cryptocurrency").value = crypto;
+
+    // Auto-calculate Daily_Return if Open and Close are filled
+    autoCalculateDailyReturn();
+  }
+
+  function autoCalculateDailyReturn() {
+    const open = parseFloat(document.getElementById("Open").value);
+    const close = parseFloat(document.getElementById("Close").value);
+
+    if (open && close) {
+      const dailyReturn = (((close - open) / open) * 100).toFixed(2);
+      document.getElementById("Daily_Return").value = dailyReturn;
+    }
+  }
+
+  function clearForm() {
+    document.getElementById("predictionForm").reset();
+    document.getElementById("cryptocurrency").value = "";
+  }
+
+  // Auto-calculate Daily Return when Open or Close changes
+  document
+    .getElementById("Open")
+    ?.addEventListener("change", autoCalculateDailyReturn);
+  document
+    .getElementById("Close")
+    ?.addEventListener("change", autoCalculateDailyReturn);
+
+  // Add loading animation on form submission
+  document
+    .getElementById("predictionForm")
+    ?.addEventListener("submit", function () {
+      const submitBtn = document.getElementById("predictBtn");
+      if (submitBtn) {
+        submitBtn.innerHTML =
+          '<i class="fas fa-spinner fa-spin"></i> Predicting...';
+        submitBtn.disabled = true;
+      }
+    });
+</script>
+{% endblock %}
