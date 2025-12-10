@@ -1,0 +1,165 @@
+{% extends "base.html" %} {% block title %}Results - Crypto Price Predictor{%
+endblock %} {% block content %}
+<div class="row">
+  <div class="col-md-10 mx-auto">
+    <div class="card">
+      <div class="card-header bg-success text-white">
+        <h3><i class="fas fa-check-circle"></i> Prediction Results</h3>
+        <p class="mb-0">Prediction completed successfully</p>
+      </div>
+      <div class="card-body">
+        <div class="alert alert-success">
+          <div class="d-flex align-items-center">
+            <div class="flex-shrink-0">
+              <i class="fas fa-chart-line fa-3x"></i>
+            </div>
+            <div class="flex-grow-1 ms-4">
+              <h4 class="alert-heading">
+                {{ cryptocurrency }} Predicted Close Price
+              </h4>
+              <div class="display-4 text-center my-4 fw-bold text-success">
+                ${{ "%.2f"|format(prediction) }}
+              </div>
+              <hr />
+              <p class="mb-0">
+                Based on the input features, this is the predicted next Close
+                price.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="row mt-4">
+          <div class="col-md-6">
+            <div class="card">
+              <div class="card-header">
+                <h5><i class="fas fa-info-circle"></i> Prediction Info</h5>
+              </div>
+              <div class="card-body">
+                <table class="table table-borderless">
+                  <tr>
+                    <th>Cryptocurrency:</th>
+                    <td>
+                      <span class="badge bg-primary fs-6"
+                        >{{ cryptocurrency }}</span
+                      >
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>Prediction Time:</th>
+                    <td id="currentTime"></td>
+                  </tr>
+                  <tr>
+                    <th>Model Used:</th>
+                    <td>XGBoost Regressor</td>
+                  </tr>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <div class="card">
+              <div class="card-header">
+                <h5><i class="fas fa-lightbulb"></i> Interpretation</h5>
+              </div>
+              <div class="card-body">
+                <p><strong>Compared to Close Price:</strong></p>
+                {% set difference = prediction - features.get('Close', 0) %} {%
+                set percent_change = (difference / features.get('Close', 1) *
+                100) if features.get('Close', 0) != 0 else 0 %} {% if difference
+                > 0 %}
+                <p class="text-success">
+                  <i class="fas fa-arrow-up"></i> Predicted to increase by ${{
+                  "%.2f"|format(difference) }} ({{ "%.2f"|format(percent_change)
+                  }}%)
+                </p>
+                {% elif difference < 0 %}
+                <p class="text-danger">
+                  <i class="fas fa-arrow-down"></i> Predicted to decrease by ${{
+                  "%.2f"|format(-difference) }} ({{
+                  "%.2f"|format(-percent_change) }}%)
+                </p>
+                {% else %}
+                <p class="text-muted">
+                  <i class="fas fa-minus"></i> No significant change predicted
+                </p>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <h5 class="mt-4 mb-3">
+          <i class="fas fa-list-alt"></i> Input Features Used:
+        </h5>
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead class="table-light">
+              <tr>
+                <th>Feature</th>
+                <th>Description</th>
+                <th>Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for feature, value in features.items() %}
+              <tr>
+                <td><strong>{{ feature }}</strong></td>
+                <td>
+                  {% if feature == 'Open' %}Opening price {% elif feature ==
+                  'High' %}Daily highest price {% elif feature == 'Low' %}Daily
+                  lowest price {% elif feature == 'Close' %}Closing price {%
+                  elif feature == 'Daily_Return' %}Daily return percentage {%
+                  elif feature == 'Log_Return' %}Logarithmic return {% elif
+                  feature == 'MA_7' %}7-day moving average {% elif feature ==
+                  'MA_14' %}14-day moving average {% elif feature == 'MA_30'
+                  %}30-day moving average {% elif feature == 'Volatility_7'
+                  %}7-day volatility {% elif feature == 'Volatility_14' %}14-day
+                  volatility {% elif feature == 'RSI' %}Relative Strength Index
+                  {% elif feature == 'MACD' %}Moving Average Convergence
+                  Divergence {% elif feature == 'MACD_Signal' %}MACD Signal line
+                  {% else %}{{ feature }}{% endif %}
+                </td>
+                <td class="fw-bold">{{ value }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="d-grid gap-2 d-md-flex justify-content-md-center mt-5">
+          <a
+            href="{{ url_for('predict') }}"
+            class="btn btn-primary btn-lg me-md-3"
+          >
+            <i class="fas fa-redo"></i> Make Another Prediction
+          </a>
+          <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-home"></i> Back to Home
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Display current time
+  document.addEventListener("DOMContentLoaded", function () {
+    const now = new Date();
+    const options = {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    };
+    document.getElementById("currentTime").textContent = now.toLocaleDateString(
+      "en-US",
+      options
+    );
+  });
+</script>
+{% endblock %}
