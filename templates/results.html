@@ -5,35 +5,79 @@ endblock %} {% block content %}
     <div class="card">
       <div class="card-header bg-success text-white">
         <h3><i class="fas fa-check-circle"></i> Prediction Results</h3>
-        <p class="mb-0">Prediction completed successfully</p>
+        <p class="mb-0">
+          Prediction for Tomorrow's Close Price completed successfully
+        </p>
       </div>
       <div class="card-body">
-        <div class="alert alert-success">
-          <div class="d-flex align-items-center">
-            <div class="flex-shrink-0">
-              <i class="fas fa-chart-line fa-3x"></i>
-            </div>
-            <div class="flex-grow-1 ms-4">
-              <h4 class="alert-heading">
-                {{ cryptocurrency }} Predicted Close Price
-              </h4>
-              <div class="display-4 text-center my-4 fw-bold text-success">
-                ${{ "%.2f"|format(prediction) }}
+        <!-- Main Prediction Card -->
+        <div class="card border-success mb-4">
+          <div class="card-header bg-success text-white">
+            <h4 class="mb-0">
+              <i class="fas fa-bullseye"></i> PREDICTION: Tomorrow's Close Price
+            </h4>
+          </div>
+          <div class="card-body">
+            <div class="row align-items-center">
+              <div class="col-md-6 text-center">
+                <div class="display-1 fw-bold text-success mb-3">
+                  <i class="fas fa-chart-line"></i>
+                </div>
+                <h5 class="text-muted">Predicted Tomorrow's Closing Price</h5>
+                <p class="text-muted">
+                  <small
+                    >Model output normalized to [{{ norm_min }}, {{ norm_max
+                    }}]</small
+                  >
+                </p>
               </div>
-              <hr />
-              <p class="mb-0">
-                Based on the input features, this is the predicted next Close
-                price.
-              </p>
+              <div class="col-md-6 text-center">
+                <div class="display-2 fw-bold text-success mb-2">
+                  ${{ "%.2f"|format(prediction|float) }}
+                </div>
+
+                {% if today_close %} {% set today_close_float =
+                today_close|float %} {% set prediction_float = prediction|float
+                %} {% set difference = prediction_float - today_close_float %}
+                {% set percent_change = (difference / today_close_float * 100)
+                if today_close_float != 0 else 0 %}
+
+                <div class="mt-3">
+                  <p class="mb-1">
+                    Today's Close:
+                    <strong>${{ "%.2f"|format(today_close_float) }}</strong>
+                  </p>
+                  {% if percent_change > 0 %}
+                  <span class="badge bg-success fs-6">
+                    <i class="fas fa-arrow-up"></i> +{{
+                    "%.2f"|format(percent_change) }}%
+                  </span>
+                  <p class="text-success mt-2">
+                    Expected to increase by ${{ "%.2f"|format(difference) }}
+                  </p>
+                  {% elif percent_change < 0 %}
+                  <span class="badge bg-danger fs-6">
+                    <i class="fas fa-arrow-down"></i> {{
+                    "%.2f"|format(percent_change) }}%
+                  </span>
+                  <p class="text-danger mt-2">
+                    Expected to decrease by ${{ "%.2f"|format(-difference) }}
+                  </p>
+                  {% else %}
+                  <span class="badge bg-secondary fs-6">No Change</span>
+                  {% endif %}
+                </div>
+                {% endif %}
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="row mt-4">
+        <div class="row mb-4">
           <div class="col-md-6">
-            <div class="card">
+            <div class="card h-100">
               <div class="card-header">
-                <h5><i class="fas fa-info-circle"></i> Prediction Info</h5>
+                <h5><i class="fas fa-info-circle"></i> Prediction Details</h5>
               </div>
               <div class="card-body">
                 <table class="table table-borderless">
@@ -46,12 +90,27 @@ endblock %} {% block content %}
                     </td>
                   </tr>
                   <tr>
+                    <th>Prediction Type:</th>
+                    <td>Next Day Close Price</td>
+                  </tr>
+                  <tr>
                     <th>Prediction Time:</th>
-                    <td id="currentTime"></td>
+                    <td><span id="currentTime"></span></td>
                   </tr>
                   <tr>
                     <th>Model Used:</th>
                     <td>XGBoost Regressor</td>
+                  </tr>
+                  <tr>
+                    <th>Today's Close:</th>
+                    <td>
+                      ${{ "%.2f"|format(today_close|float) if today_close else
+                      'N/A' }}
+                    </td>
+                  </tr>
+                  <tr>
+                    <th>Normalization:</th>
+                    <td>[{{ norm_min }}, {{ norm_max }}] range</td>
                   </tr>
                 </table>
               </div>
@@ -59,39 +118,74 @@ endblock %} {% block content %}
           </div>
 
           <div class="col-md-6">
-            <div class="card">
+            <div class="card h-100">
               <div class="card-header">
-                <h5><i class="fas fa-lightbulb"></i> Interpretation</h5>
+                <h5><i class="fas fa-lightbulb"></i> Trading Insight</h5>
               </div>
               <div class="card-body">
-                <p><strong>Compared to Close Price:</strong></p>
-                {% set difference = prediction - features.get('Close', 0) %} {%
-                set percent_change = (difference / features.get('Close', 1) *
-                100) if features.get('Close', 0) != 0 else 0 %} {% if difference
-                > 0 %}
-                <p class="text-success">
-                  <i class="fas fa-arrow-up"></i> Predicted to increase by ${{
-                  "%.2f"|format(difference) }} ({{ "%.2f"|format(percent_change)
-                  }}%)
-                </p>
-                {% elif difference < 0 %}
-                <p class="text-danger">
-                  <i class="fas fa-arrow-down"></i> Predicted to decrease by ${{
-                  "%.2f"|format(-difference) }} ({{
-                  "%.2f"|format(-percent_change) }}%)
-                </p>
+                {% if today_close %} {% set today_close_float =
+                today_close|float %} {% set prediction_float = prediction|float
+                %} {% set percent_change = ((prediction_float -
+                today_close_float) / today_close_float * 100) if
+                today_close_float != 0 else 0 %} {% if percent_change > 5 %}
+                <div class="alert alert-success">
+                  <h6><i class="fas fa-rocket"></i> Strong Bullish Signal</h6>
+                  <p class="mb-0">
+                    Significant price increase predicted. Consider buying
+                    opportunity.
+                  </p>
+                </div>
+                {% elif percent_change > 2 %}
+                <div class="alert alert-info">
+                  <h6><i class="fas fa-arrow-up"></i> Bullish Signal</h6>
+                  <p class="mb-0">Moderate price increase predicted.</p>
+                </div>
+                {% elif percent_change < -5 %}
+                <div class="alert alert-danger">
+                  <h6>
+                    <i class="fas fa-skull-crossbones"></i> Strong Bearish
+                    Signal
+                  </h6>
+                  <p class="mb-0">
+                    Significant price drop predicted. Consider selling or
+                    waiting.
+                  </p>
+                </div>
+                {% elif percent_change < -2 %}
+                <div class="alert alert-warning">
+                  <h6><i class="fas fa-arrow-down"></i> Bearish Signal</h6>
+                  <p class="mb-0">Moderate price decrease predicted.</p>
+                </div>
                 {% else %}
-                <p class="text-muted">
-                  <i class="fas fa-minus"></i> No significant change predicted
-                </p>
+                <div class="alert alert-secondary">
+                  <h6><i class="fas fa-minus"></i> Neutral Signal</h6>
+                  <p class="mb-0">
+                    Little to no change predicted. Market may consolidate.
+                  </p>
+                </div>
+                {% endif %} {% else %}
+                <div class="alert alert-secondary">
+                  <h6>
+                    <i class="fas fa-info-circle"></i> Prediction Complete
+                  </h6>
+                  <p class="mb-0">Tomorrow's close price has been predicted.</p>
+                </div>
                 {% endif %}
+                <p class="text-muted mb-0 mt-2">
+                  <small
+                    ><i class="fas fa-exclamation-triangle"></i> Disclaimer:
+                    This is a prediction, not financial advice. Always do your
+                    own research.</small
+                  >
+                </p>
               </div>
             </div>
           </div>
         </div>
 
-        <h5 class="mt-4 mb-3">
-          <i class="fas fa-list-alt"></i> Input Features Used:
+        {% if features %}
+        <h5 class="mb-3">
+          <i class="fas fa-list-alt"></i> Input Data Used (Today's Market):
         </h5>
         <div class="table-responsive">
           <table class="table table-hover">
@@ -99,7 +193,8 @@ endblock %} {% block content %}
               <tr>
                 <th>Feature</th>
                 <th>Description</th>
-                <th>Value</th>
+                <th>Original Value</th>
+                <th>Normalized Value</th>
               </tr>
             </thead>
             <tbody>
@@ -107,26 +202,46 @@ endblock %} {% block content %}
               <tr>
                 <td><strong>{{ feature }}</strong></td>
                 <td>
-                  {% if feature == 'Open' %}Opening price {% elif feature ==
-                  'High' %}Daily highest price {% elif feature == 'Low' %}Daily
-                  lowest price {% elif feature == 'Close' %}Closing price {%
-                  elif feature == 'Daily_Return' %}Daily return percentage {%
-                  elif feature == 'Log_Return' %}Logarithmic return {% elif
-                  feature == 'MA_7' %}7-day moving average {% elif feature ==
-                  'MA_14' %}14-day moving average {% elif feature == 'MA_30'
-                  %}30-day moving average {% elif feature == 'Volatility_7'
-                  %}7-day volatility {% elif feature == 'Volatility_14' %}14-day
+                  {% if feature == 'Open' %}Today's opening price {% elif
+                  feature == 'High' %}Today's highest price {% elif feature ==
+                  'Low' %}Today's lowest price {% elif feature == 'Close'
+                  %}Today's closing price (current) {% elif feature ==
+                  'Daily_Return' %}Today's return percentage {% elif feature ==
+                  'Log_Return' %}Logarithmic return {% elif feature == 'MA_7'
+                  %}7-day moving average {% elif feature == 'MA_14' %}14-day
+                  moving average {% elif feature == 'MA_30' %}30-day moving
+                  average {% elif feature == 'Volatility_7' %}7-day price
+                  volatility {% elif feature == 'Volatility_14' %}14-day price
                   volatility {% elif feature == 'RSI' %}Relative Strength Index
                   {% elif feature == 'MACD' %}Moving Average Convergence
                   Divergence {% elif feature == 'MACD_Signal' %}MACD Signal line
                   {% else %}{{ feature }}{% endif %}
                 </td>
-                <td class="fw-bold">{{ value }}</td>
+                <td class="fw-bold">
+                  {% if feature in ['Open', 'High', 'Low', 'Close'] %} ${{
+                  "%.2f"|format(value|float) }} {% elif feature ==
+                  'Daily_Return' %} {{ "%.2f"|format(value|float) }}% {% elif
+                  feature in ['RSI'] %} {{ "%.1f"|format(value|float) }} {% elif
+                  feature in ['Volatility_7', 'Volatility_14'] %} {{
+                  "%.4f"|format(value|float) }} {% else %} {{
+                  "%.4f"|format(value|float) }} {% endif %}
+                </td>
+                <td class="text-muted">
+                  {% if normalized_features and feature in normalized_features
+                  %} {{ "%.4f"|format(normalized_features[feature]|float) }}
+                  <small class="d-block"
+                    >(in [{{ norm_min }}, {{ norm_max }}])</small
+                  >
+                  {% else %}
+                  <span class="text-muted">N/A</span>
+                  {% endif %}
+                </td>
               </tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
+        {% endif %}
 
         <div class="d-grid gap-2 d-md-flex justify-content-md-center mt-5">
           <a
@@ -156,10 +271,10 @@ endblock %} {% block content %}
       minute: "2-digit",
       second: "2-digit",
     };
-    document.getElementById("currentTime").textContent = now.toLocaleDateString(
-      "en-US",
-      options
-    );
+    const timeElement = document.getElementById("currentTime");
+    if (timeElement) {
+      timeElement.textContent = now.toLocaleDateString("en-US", options);
+    }
   });
 </script>
 {% endblock %}
