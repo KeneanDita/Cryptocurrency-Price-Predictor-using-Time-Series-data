@@ -4,6 +4,10 @@ A Flask web application that predicts **tomorrow's closing prices** for cryptocu
 
 The models predict **tomorrow's closing price** based on today's market data (Target = Close.shift(-1)).
 
+* Screenshot of Landing page
+
+![Landing Page](/static/ff.png)
+
 ## Features
 
 - **Next-Day Price Prediction**: Predicts tomorrow's closing price based on today's market data
